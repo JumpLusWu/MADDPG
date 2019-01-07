@@ -60,7 +60,7 @@ class Agent(Entity):
     def __init__(self):
         super(Agent, self).__init__()
         # agents are movable by default
-        self.movable = False
+        self.movable = True
         # cannot send communication signals
         self.silent = False
         # cannot observe the world
