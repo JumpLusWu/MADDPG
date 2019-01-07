@@ -100,21 +100,6 @@ class Scenario(BaseScenario):
     def reward(self, agent, world):
         # Agents are rewarded based on minimum agent distance to each landmark, penalized for collisions
         rew = 0
-        coef_collision = 1.0
-        coef_dist = 1.0
-        coef_cosdist = 0.3
-        for i, landmark in enumerate(world.landmarks):
-            if i <world.num_goals:
-                dists = [np.sqrt(np.sum(np.square(a.state.p_pos - landmark.state.p_pos))) for a in world.agents]
-                rew -= min(dists) * coef_dist
-            else:
-                if agent.collide:
-                    if self.is_collision(agent, landmark):
-                        rew -= 1 * coef_collision
-        if agent.collide:
-            for a in world.agents:
-                if self.is_collision(a, agent):
-                    rew -= 1 * coef_collision
         '''
             We can modify this part to include velocity direction into the model.
             Compute cosine distance between agent velocity and landmark velocity.
@@ -126,7 +111,7 @@ class Scenario(BaseScenario):
             if i <world.num_goals:
                 # cos_dist = [np.sqrt(np.sum(np.square(a.state.p_pos - landmark.state.p_pos))) for a in world.agents]
                 cos_dist = [spatial.distance.cosine(a.state.p_vel, landmark.state.p_vel) for a in world.agents]
-                rew -= min(cos_dist) * coef_cosdist
+                rew -= min(cos_dist) * 1
         return rew
 
     def observation(self, agent, world):
