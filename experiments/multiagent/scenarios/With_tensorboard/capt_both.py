@@ -143,7 +143,7 @@ class Scenario(BaseScenario):
             if i <world.num_goals:
                 # cos_dist = [np.sqrt(np.sum(np.square(a.state.p_pos - landmark.state.p_pos))) for a in world.agents]
                 cos_dist.append(spatial.distance.cosine(agent.state.p_vel, landmark.state.p_vel))
-        rew -= min(cos_dist) * coef_cosdist
+                rew -= sum(cos_dist) * coef_cosdist
 
         return rew
 
