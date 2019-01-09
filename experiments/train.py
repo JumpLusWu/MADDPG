@@ -12,8 +12,8 @@ def parse_args():
     parser = argparse.ArgumentParser("Reinforcement Learning experiments for multiagent environments")
     # Environment
     parser.add_argument("--scenario", type=str, default="simple", help="name of the scenario script")
-    parser.add_argument("--max-episode-len", type=int, default=2, help="maximum episode length")
-    parser.add_argument("--num-episodes", type=int, default=3000, help="number of episodes")
+    parser.add_argument("--max-episode-len", type=int, default=25, help="maximum episode length")
+    parser.add_argument("--num-episodes", type=int, default=60000, help="number of episodes")
     parser.add_argument("--num-adversaries", type=int, default=0, help="number of adversaries")
     parser.add_argument("--good-policy", type=str, default="maddpg", help="policy for good agents")
     parser.add_argument("--adv-policy", type=str, default="maddpg", help="policy of adversaries")
@@ -24,7 +24,7 @@ def parse_args():
     parser.add_argument("--num-units", type=int, default=64, help="number of units in the mlp")
     # Checkpointing
     parser.add_argument("--exp-name", type=str, default=None, help="name of the experiment")
-    parser.add_argument("--save-dir", type=str, default="./train_rotation/policy/", help="directory in which training state and model should be saved")
+    parser.add_argument("--save-dir", type=str, default="./temp/policy", help="directory in which training state and model should be saved")
     parser.add_argument("--save-rate", type=int, default=1000, help="save model once every time this many episodes are completed")
     parser.add_argument("--load-dir", type=str, default="", help="directory in which training state and model are loaded")
     # Evaluation
@@ -77,6 +77,12 @@ def get_trainers(env, num_adversaries, obs_shape_n, arglist):
 
 def train(arglist):
     with U.single_threaded_session():
+        #tensorboard
+        summary_writer = tf.summary.FileWriter("./graph/", U.get_session().graph)
+        reward_plot = None
+        reward_summary = tf.Summary()
+        reward_summary.value.add(tag='reward', simple_value=reward_plot)
+
         # Create environment
         env = make_env(arglist.scenario, arglist, arglist.benchmark)
         # Create agent trainers
@@ -106,7 +112,6 @@ def train(arglist):
         train_step = 0
         t_start = time.time()
 
-        U.save_state(arglist.save_dir, saver=saver)
         print('Starting iterations...')
         while True:
             # get action
@@ -150,7 +155,7 @@ def train(arglist):
 
             # for displaying learned policies
             if arglist.display:
-                time.sleep(0.3)
+                time.sleep(0.1)
                 env.render()
                 continue
 
@@ -160,6 +165,10 @@ def train(arglist):
                 agent.preupdate()
             for agent in trainers:
                 loss = agent.update(trainers, train_step)
+
+            # add reward to tensorboard
+            reward_summary.value[0].simple_value = np.mean(episode_rewards[-arglist.save_rate:])
+            summary_writer.add_summary(reward_summary, len(episode_rewards))
 
             # save model, display training output
             if terminal and (len(episode_rewards) % arglist.save_rate == 0):
@@ -172,6 +181,8 @@ def train(arglist):
                     print("steps: {}, episodes: {}, mean episode reward: {}, agent episode reward: {}, time: {}".format(
                         train_step, len(episode_rewards), np.mean(episode_rewards[-arglist.save_rate:]),
                         [np.mean(rew[-arglist.save_rate:]) for rew in agent_rewards], round(time.time()-t_start, 3)))
+
+
                 t_start = time.time()
                 # Keep track of final episode reward
                 final_ep_rewards.append(np.mean(episode_rewards[-arglist.save_rate:]))
@@ -191,5 +202,4 @@ def train(arglist):
 
 if __name__ == '__main__':
     arglist = parse_args()
-    arglist.scenario = 'capt_both'
     train(arglist)
