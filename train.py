@@ -191,5 +191,6 @@ def train(arglist):
 
 if __name__ == '__main__':
     arglist = parse_args()
-    
+    arglist.scenario = 'capt_Wu'
+    arglist.display = True
     train(arglist)

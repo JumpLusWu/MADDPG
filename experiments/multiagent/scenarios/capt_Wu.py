@@ -42,9 +42,11 @@ class Scenario(BaseScenario):
         # random properties for agents
         for i, agent in enumerate(world.agents):
             agent.state.p_pos = np.random.uniform(-1, +1, world.dim_p)
-            agent.state.p_vel = np.random.normal(size=2)
+            agent.state.p_vel = np.random.uniform(-0.005,0.005,2)
+            #agent.state.p_vel = np.random.normal(size=2)
             agent.state.c = np.zeros(world.dim_c)
             agent.color = np.array([0.35, i/10, 0.])
+            agent.max_speed = 0.01
         # random properties for landmarks
         p_vel = np.random.normal(size=2)
         pos_y_choice = np.arange(-1,1,0.20)
@@ -115,8 +117,8 @@ class Scenario(BaseScenario):
         rew_dist = 0
         rew_collision = 0
         rew_cos_dist = 0
-        coef_collision = 1
-        coef_dist = 1
+        coef_collision = 0
+        coef_dist = 0
         coef_cosdist = 1
         for i, landmark in enumerate(world.landmarks):
             if i <world.num_goals:
@@ -148,7 +150,7 @@ class Scenario(BaseScenario):
             if i <world.num_goals:
                 # cos_dist = [np.sqrt(np.sum(np.square(a.state.p_pos - landmark.state.p_pos))) for a in world.agents]
                 cos_dist.append(spatial.distance.cosine(agent.state.p_vel, landmark.state.p_vel))
-        rew_cos_dist -= min(cos_dist) * coef_cosdist / (-rew_dist)
+        rew_cos_dist -= min(cos_dist) 
 
         rew = rew_collision + rew_cos_dist + rew_dist
         # if agent.name == 'agent 0':
@@ -178,5 +180,5 @@ class Scenario(BaseScenario):
             if other is agent: continue
             comm.append(other.state.c)
             other_pos.append(other.state.p_pos - agent.state.p_pos)
-        return np.concatenate([agent.state.p_vel] + entity_color+[agent.state.p_pos] + entity_pos + entity_vel +  other_pos + comm)
+        return np.concatenate([agent.state.p_vel] + entity_vel)
        

@@ -155,7 +155,7 @@ def train(arglist):
 
             # for displaying learned policies
             if arglist.display:
-                time.sleep(0.1)
+                time.sleep(0.5)
                 env.render()
                 continue
 
@@ -202,4 +202,12 @@ def train(arglist):
 
 if __name__ == '__main__':
     arglist = parse_args()
+    arglist.scenario = 'capt_Wu'
+    arglist.display = True
+    arglist.num_units= 256
+    arglist.load_dir = './temp/policy'
+    arglist.exp_name = 'test1/'
+    arglist.max_episode_len =50
+    arglist.num_episodes =6000
+    arglist.save_dir ='./temp2/policy'
     train(arglist)
