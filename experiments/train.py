@@ -130,7 +130,7 @@ def train(arglist):
 
             # get action
             action_n = [agent.action(obs) for agent, obs in zip(trainers,obs_n)]
-            print(action_n)
+            #print(action_n)
             time.sleep(1)
             # environment step
             new_obs_n, rew_n, done_n, info_n = env.step(action_n)
@@ -219,12 +219,12 @@ def train(arglist):
 if __name__ == '__main__':
     arglist = parse_args()
     arglist.scenario = 'capt_Wu'
-    arglist.display = True
+    arglist.display = False
     arglist.num_units= 128
     arglist.load_dir = './temp_Wu/train_model_update/temp_Wu/policy'
     arglist.load_dir2 = './temp_orientation/policy'
     arglist.exp_name = 'test1/'
-    arglist.max_episode_len =100
-    arglist.num_episodes =6000
+    arglist.max_episode_len =2
+    arglist.num_episodes =2000
     arglist.save_dir ='./temp/policy'
     train(arglist)

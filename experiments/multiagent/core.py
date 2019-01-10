@@ -7,11 +7,10 @@ class EntityState(object):
         self.p_pos = None
         # physical velocity
         self.p_vel = None
-        # physical angular velocity
-        self.p_wvel =None
-        # physical angularposition
-        self.p_wpos = None
-
+        # physical angle velocity
+        self.p_angle_vel = None
+        #phisical rotation
+        self.p_angle = None
 
 # state of agents (including communication and internal/mental state)
 class AgentState(EntityState):
@@ -27,6 +26,8 @@ class Action(object):
         self.u = None
         # communication action
         self.c = None
+        # phisical rotation
+        self.rot = None
 
 # properties and state of physical world entity
 class Entity(object):
@@ -37,8 +38,6 @@ class Entity(object):
         self.size = 0.050
         # entity can move / be pushed
         self.movable = False
-        # entity can rotate or not
-        self.rotatable = False
         # entity collides with others
         self.collide = True
         # material density (affects mass)
@@ -52,18 +51,14 @@ class Entity(object):
         self.state = EntityState()
         # mass
         self.initial_mass = 1.0
-        # for rotation 
-        self.initial_moment_inertia = 1.0
-        self.inital_radius = 1.0
-        self.max_angular_speed = None
-        self.max_angular_accel = None 
 
     @property
     def mass(self):
         return self.initial_mass
+
     @property
-    def inertia(self):
-        return self.initial_moment_inertia
+    def momentum_mass(self):
+        return np.pi/4*self.size**4*self.initial_mass
 
 # properties of landmark entities
 class Landmark(Entity):
@@ -76,8 +71,6 @@ class Agent(Entity):
         super(Agent, self).__init__()
         # agents are movable by default
         self.movable = True
-        # agents are rotatable by default
-        self.rotatable = False
         # cannot send communication signals
         self.silent = False
         # cannot observe the world
@@ -88,8 +81,8 @@ class Agent(Entity):
         self.c_noise = None
         # control range
         self.u_range = 1.0
-        # control range for rotation
-        self.u_rotate_range = 1.0
+        # rotation range
+        self.rot_range = 1.0
         # state
         self.state = AgentState()
         # action
@@ -107,6 +100,8 @@ class World(object):
         self.dim_c = 0
         # position dimensionality
         self.dim_p = 2
+        # rotation dimensionality
+        self.dim_rot = 1
         # color dimensionality
         self.dim_color = 3
         # simulation timestep
@@ -139,42 +134,27 @@ class World(object):
             agent.action = agent.action_callback(agent, self)
         # gather forces applied to entities
         p_force = [None] * len(self.entities)
-        # gather rotation forces applie to entities
-        p_torque = [None]*len(self.entities)
+        p_rot_force = [None]*len(self.entities)
         # apply agent physical controls
-        p_force = self.apply_action_force(p_force)
-        p_torque = self.apply_action_torque(p_torque)
+        p_force, p_rot_force = self.apply_action_force(p_force, p_rot_force)
         # apply environment forces
         p_force = self.apply_environment_force(p_force)
         # integrate physical state
-        self.integrate_state(p_force)
-        self.integrate_w_state(p_torque)
+        self.integrate_state(p_force, p_rot_force)
         # update agent state
         for agent in self.agents:
             self.update_agent_state(agent)
-        print('------------')
-        print(agent.action.u)
-        print('-------------')
-
 
     # gather agent action forces
-    def apply_action_force(self, p_force):
+    def apply_action_force(self, p_force, p_rot_force):
         # set applied forces
         for i,agent in enumerate(self.agents):
             if agent.movable:
                 noise = np.random.randn(*agent.action.u.shape) * agent.u_noise if agent.u_noise else 0.0
-                p_force[i] = agent.action.u + noise                
-        return p_force
+                p_force[i] = agent.action.u + noise
+                p_rot_force[i] = agent.action.rot + noise
 
- # gather agent action rotation forces
-    def apply_action_torque(self, p_torque):
-        # set applied forces
-        for i,agent in enumerate(self.agents):
-            if agent.rotatable:
-                noise = 0
-                p_torque[i] = agent.action.u + noise            
-        return p_torque
-
+        return p_force, p_rot_force
 
     # gather physical forces acting on entities
     def apply_environment_force(self, p_force):
@@ -190,31 +170,28 @@ class World(object):
                     if(p_force[b] is None): p_force[b] = 0.0
                     p_force[b] = f_b + p_force[b]        
         return p_force
-  # integrate  physical state of rotation
-    def integrate_w_state(self, p_torque):
-        for i,entity in enumerate(self.entities):
-                if not entity.rotatable: continue
-                entity.state.p_wvel = entity.state.p_wvel * (1 - self.damping)
-                if (p_torque[i] is not None):
-                    entity.state.p_wvel += (p_torque[i] / entity.inertia) * self.dt
-                if entity.max_angular_speed is not None:
-                    if entity.state.p_wvel > entity.max_angular_speed:
-                        entity.state.p_wvel = entity.max_angular_speed
-                entity.state.p_wpos += entity.state.p_wvel * self.dt
 
     # integrate physical state
-    def integrate_state(self, p_force):
+    def integrate_state(self, p_force, p_rot_force):
         for i,entity in enumerate(self.entities):
             if not entity.movable: continue
             entity.state.p_vel = entity.state.p_vel * (1 - self.damping)
+            entity.state.p_angle_vel = entity.state.p_angle_vel*(1-self.damping)
             if (p_force[i] is not None):
                 entity.state.p_vel += (p_force[i] / entity.mass) * self.dt
+                entity.state.p_angle_vel += (p_rot_force[i] / entity.momentum_mass) * self.dt
             if entity.max_speed is not None:
                 speed = np.sqrt(np.square(entity.state.p_vel[0]) + np.square(entity.state.p_vel[1]))
                 if speed > entity.max_speed:
                     entity.state.p_vel = entity.state.p_vel / np.sqrt(np.square(entity.state.p_vel[0]) +
                                                                   np.square(entity.state.p_vel[1])) * entity.max_speed
             entity.state.p_pos += entity.state.p_vel * self.dt
+            entity.state.p_angle += (entity.state.p_angle_vel * self.dt)
+            if entity.state.p_angle > 0:
+                entity.state.p_angle = entity.state.p_angle%(2*np.pi)
+            else:
+                entity.state.p_angle = -(entity.state.p_angle%(2*np.pi)) + 2*np.pi
+
 
     def update_agent_state(self, agent):
         # set communication state (directly for now)
