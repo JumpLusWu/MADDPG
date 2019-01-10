@@ -231,9 +231,10 @@ class MultiAgentEnv(gym.Env):
             i = 0
             for entity in self.world.entities:
                 if i<8:
-                #geom = rendering.make_circle_with_arrow(radius= entity.size,p_pos=entity.state.p_pos,filled=False)
+                # render for the landmark and agent
                     geom = rendering.make_circle_with_arrow(entity.size,entity.state.p_pos,filled=True)
                 else:
+                    # render for the obstacle
                     geom = rendering.make_circle(entity.size)
                 xform = rendering.Transform() # 6 entities 
                
@@ -267,11 +268,9 @@ class MultiAgentEnv(gym.Env):
             for e, entity in enumerate(self.world.entities):
                 # u
                 if(e<4):
-                    v_angle = np.arctan2(entity.state.p_vel[1],entity.state.p_vel[0])
-                    self.render_geoms_xform[e].set_rotation(v_angle+1/2*math.pi)
+                    self.render_geoms_xform[e].set_rotation(entity.state.angle+1/2*math.pi)
                 if(e>=4 and e<8):
-                    v_angle = np.arctan2(entity.state.p_vel[1],entity.state.p_vel[0])
-                    self.render_geoms_xform[e].set_rotation(1/2*math.pi+v_angle)
+                    self.render_geoms_xform[e].set_rotation(1/2*math.pi+entity.state.angle)
     
                 self.render_geoms_xform[e].set_translation(*entity.state.p_pos)
                 
