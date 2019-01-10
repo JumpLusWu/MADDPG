@@ -27,6 +27,7 @@ def parse_args():
     parser.add_argument("--save-dir", type=str, default="./temp/policy", help="directory in which training state and model should be saved")
     parser.add_argument("--save-rate", type=int, default=1000, help="save model once every time this many episodes are completed")
     parser.add_argument("--load-dir", type=str, default="", help="directory in which training state and model are loaded")
+    parser.add_argument("--load-dir2", type=str, default="", help="directory in which training state and model are loaded")
     # Evaluation
     parser.add_argument("--restore", action="store_true", default=False)
     parser.add_argument("--display", action="store_true", default=False)
@@ -59,6 +60,10 @@ def make_env(scenario_name, arglist, benchmark=False):
     else:
         env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation)
     return env
+
+def limit_speed_for_v(world,vel):
+        for i, agent in enumerate(world.agents):
+            agent.max_speed = vel
 
 def get_trainers(env, num_adversaries, obs_shape_n, arglist):
     trainers = []
@@ -114,6 +119,15 @@ def train(arglist):
 
         print('Starting iterations...')
         while True:
+            if episode_step==50:
+                U.initialize()
+                U.load_state(arglist.load_dir2)
+                limit_speed_for_v(env.world,1e-3)
+            if episode_step==0:
+                #U.initialize()
+                U.load_state(arglist.load_dir)
+                limit_speed_for_v(env.world,None)
+
             # get action
             action_n = [agent.action(obs) for agent, obs in zip(trainers,obs_n)]
             # environment step
@@ -155,7 +169,7 @@ def train(arglist):
 
             # for displaying learned policies
             if arglist.display:
-                time.sleep(0.5)
+                time.sleep(0.1)
                 env.render()
                 continue
 
@@ -205,9 +219,10 @@ if __name__ == '__main__':
     arglist.scenario = 'capt_Wu'
     arglist.display = True
     arglist.num_units= 256
-    arglist.load_dir = './temp2/policy'
+    arglist.load_dir = './temp_Wu/policy'
+    arglist.load_dir2 = './temp_orientation/policy'
     arglist.exp_name = 'test1/'
-    arglist.max_episode_len =50
+    arglist.max_episode_len =100
     arglist.num_episodes =6000
     arglist.save_dir ='./temp/policy'
     train(arglist)
