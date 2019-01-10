@@ -119,14 +119,14 @@ def train(arglist):
 
         print('Starting iterations...')
         while True:
-            if episode_step==50:
-                U.initialize()
-                U.load_state(arglist.load_dir2)
-                limit_speed_for_v(env.world,1e-3)
-            if episode_step==0:
-                #U.initialize()
-                U.load_state(arglist.load_dir)
-                limit_speed_for_v(env.world,None)
+            # if episode_step==50:
+            #     U.initialize()
+            #     U.load_state(arglist.load_dir2)
+            #     limit_speed_for_v(env.world,1e-3)
+            # if episode_step==0:
+            #     #U.initialize()
+            #     U.load_state(arglist.load_dir)
+            #     limit_speed_for_v(env.world,None)
 
             # get action
             action_n = [agent.action(obs) for agent, obs in zip(trainers,obs_n)]
@@ -218,8 +218,8 @@ if __name__ == '__main__':
     arglist = parse_args()
     arglist.scenario = 'capt_Wu'
     arglist.display = True
-    arglist.num_units= 256
-    arglist.load_dir = './temp_Wu/policy'
+    arglist.num_units= 128
+    arglist.load_dir = './temp_Wu/train_model_update/temp_Wu/policy'
     arglist.load_dir2 = './temp_orientation/policy'
     arglist.exp_name = 'test1/'
     arglist.max_episode_len =100
