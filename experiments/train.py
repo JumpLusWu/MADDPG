@@ -205,9 +205,9 @@ if __name__ == '__main__':
     arglist.scenario = 'capt_Wu'
     arglist.display = True
     arglist.num_units= 256
-    arglist.load_dir = './temp/policy'
+    arglist.load_dir = './temp2/policy'
     arglist.exp_name = 'test1/'
     arglist.max_episode_len =50
     arglist.num_episodes =6000
-    arglist.save_dir ='./temp2/policy'
+    arglist.save_dir ='./temp/policy'
     train(arglist)

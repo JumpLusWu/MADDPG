@@ -43,7 +43,6 @@ class Scenario(BaseScenario):
         for i, agent in enumerate(world.agents):
             agent.state.p_pos = np.random.uniform(-1, +1, world.dim_p)
             agent.state.p_vel = np.random.uniform(-0.005,0.005,2)
-            #agent.state.p_vel = np.random.normal(size=2)
             agent.state.c = np.zeros(world.dim_c)
             agent.color = np.array([0.35, i/10, 0.])
             agent.max_speed = 0.01
@@ -180,5 +179,5 @@ class Scenario(BaseScenario):
             if other is agent: continue
             comm.append(other.state.c)
             other_pos.append(other.state.p_pos - agent.state.p_pos)
-        return np.concatenate([agent.state.p_vel] + entity_vel)
+        return np.concatenate([agent.state.p_vel] + entity_color+[agent.state.p_pos] + entity_pos + entity_vel +  other_pos + comm)
        
