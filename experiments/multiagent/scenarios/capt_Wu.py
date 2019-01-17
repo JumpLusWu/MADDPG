@@ -24,15 +24,13 @@ class Scenario(BaseScenario):
             agent.size = 0.1
         # add goals
         world.landmarks = [Landmark() for i in range(world.num_goals+world.num_obstacles)]
-        p_vel = np.zeros(2)
-        p_angle = np.random.uniform(size=1)
+        p_vel = np.random.normal(size=2)
         for i, landmark in enumerate(world.landmarks):
             if i <world.num_goals:
                 landmark.name = 'goal %d' %i
                 landmark.collide = False
                 landmark.movable = False
                 landmark.state.p_vel = p_vel
-                landmark.state.p_angle = p_angle
             else:
                 landmark.name = 'obstacle %d' %(i-world.num_goals)
                 landmark.collide = True
@@ -44,14 +42,11 @@ class Scenario(BaseScenario):
         # random properties for agents
         for i, agent in enumerate(world.agents):
             agent.state.p_pos = np.random.uniform(-1, +1, world.dim_p)
-            agent.state.p_vel = np.zeros(2)
-            # for rotation
-            agent.state.p_angle = np.random.uniform(0,2*math.pi,1)
-            agent.state.p_angle_vel =0
+            agent.state.p_vel = np.random.normal(size=2)
             agent.state.c = np.zeros(world.dim_c)
             agent.color = np.array([0.35, i/10, 0.])
         # random properties for landmarks
-        landmark_angle = np.random.uniform(0,2*math.pi,1)
+        p_vel = np.random.normal(size=2)
         pos_y_choice = np.arange(-1,1,0.20)
         pos_y=np.random.choice(pos_y_choice, 6, replace= False)
         for i, landmark in enumerate(world.landmarks):
@@ -59,7 +54,7 @@ class Scenario(BaseScenario):
             if i <world.num_goals:
                 landmark.color = np.array([0., .35, 0.])
                 landmark.color_ind = np.array([0,1])
-                landmark.state.p_angle = landmark_angle
+                landmark.state.p_vel = p_vel
                 '''
                 Initialize velocity vectors for different landmarks
                 landmark.p_vel = np.array([1,1])
@@ -152,9 +147,8 @@ class Scenario(BaseScenario):
         for i, landmark in enumerate(world.landmarks):
             if i <world.num_goals:
                 # cos_dist = [np.sqrt(np.sum(np.square(a.state.p_pos - landmark.state.p_pos))) for a in world.agents]
-                diff_angle = abs(agent.state.p_angle-landmark.state.p_angle)
-                cos_dist.append(np.pi - abs(diff_angle-np.pi))
-        rew_cos_dist -= min(cos_dist) * coef_cosdist
+                cos_dist.append(spatial.distance.cosine(agent.state.p_vel, landmark.state.p_vel))
+        rew_cos_dist -= min(cos_dist) * coef_cosdist / (-rew_dist)
 
         rew = rew_collision + rew_cos_dist + rew_dist
         # if agent.name == 'agent 0':
@@ -184,11 +178,5 @@ class Scenario(BaseScenario):
             if other is agent: continue
             comm.append(other.state.c)
             other_pos.append(other.state.p_pos - agent.state.p_pos)
-        # for rotation
-        entity_angle=[]
-        for i, entity in enumerate(world.landmarks):
-            if i < world.num_goals:
-                temp_angle = np.append(entity.state.p_angle-agent.state.p_angle, 0)
-                entity_angle.append(temp_angle)
-        return np.concatenate([agent.state.p_vel] +entity_angle +entity_color+[agent.state.p_pos] + entity_pos + entity_vel +  other_pos + comm)
+        return np.concatenate([agent.state.p_vel] + entity_color+[agent.state.p_pos] + entity_pos + entity_vel +  other_pos + comm)
        

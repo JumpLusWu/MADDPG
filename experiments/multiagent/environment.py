@@ -4,6 +4,7 @@ from gym.envs.registration import EnvSpec
 import numpy as np
 from multiagent.multi_discrete import MultiDiscrete
 import math
+from math import pow, atan2, sqrt, cos, sin, atan, asin
 
 
 # environment for all agents in the multiagent world
@@ -79,12 +80,94 @@ class MultiAgentEnv(gym.Env):
             self.viewers = [None] * self.n
         self._reset_render()
 
-    def step(self, action_n):
+    def step(self, action_n, use_rvo = False):
         obs_n = []
         reward_n = []
         done_n = []
         info_n = {'n': []}
         self.agents = self.world.policy_agents
+
+        is_inRVO = False
+        for i, agent in enumerate(self.agents):
+            v_mag = self.world.update_rvo(agent)
+            if self.world.collision(agent):
+                dists = []
+                for j, landmark in enumerate(self.world.landmarks):
+                    if j < self.world.num_goals:
+                        dists.append(np.sqrt(np.sum(np.square(agent.state.p_pos - landmark.state.p_pos))))
+                #goal_pose = self.world.landmarks[dists.index(min(dists))]
+                #print(self.world.landmarks[i].name, agent.name)
+                goal_pose = self.world.landmarks[i]
+                # agent.goal_pose.x = goal_pose.state.p_pos[0]
+                # agent.goal_pose.y = goal_pose.state.p_pos[1]
+                # agent.pose.x = agent.state.p_pos[0]
+                # agent.pose.y - agent.state.p_pos[1]
+                # agent.desired_heading = atan2(self.goal_pose.state.p_pos[1] - self.agent.state_p_pos[1] self.goal_pose.state.p_pos[0] - self.agent.state_p_pos[0])
+                # agent.heading = agent.desired_heading
+                heading = self.world.choose_new_velocity_RVO(agent,goal_pose.state.p_pos[0],
+                                                            goal_pose.state.p_pos[1],
+                                                            agent.state.p_pos[0],
+                                                            agent.state.p_pos[1])
+                speed_x = v_mag * cos(heading)
+                speed_y = v_mag * sin(heading)
+                mass = 1
+                dt = 0.1
+                action_x = 0.05*(speed_x - agent.state.p_vel[0])*mass/dt
+                action_y = 0.05*(speed_y - agent.state.p_vel[1])*mass/dt
+
+                action_n[i][1] = action_x
+                action_n[i][2] = 0
+                action_n[i][3] = action_y
+                action_n[i][4] = 0
+            else:
+                dists = []
+                for j, landmark in enumerate(self.world.landmarks):
+                    if j < self.world.num_goals:
+                        dists.append(np.sqrt(np.sum(np.square(agent.state.p_pos - landmark.state.p_pos))))
+                # goal_pose = self.world.landmarks[dists.index(min(dists))]
+                # print(self.world.landmarks[i].name, agent.name)
+                goal_pose = self.world.landmarks[i]
+
+                desired_heading = atan2(goal_pose.state.p_pos[1] - agent.state.p_pos[1],
+                                goal_pose.state.p_pos[0] - agent.state.p_pos[0])
+                if(self.world.in_RVO(desired_heading, agent) == True):
+                    print("2")
+                    #print("desired heading still inside. Continue prev heading")
+                    #self.vel_msg.linear.x = 0
+                    #self.heading = self.prev_heading
+                    heading = self.world.choose_new_velocity_RVO(agent,goal_pose.state.p_pos[0],
+                                                            goal_pose.state.p_pos[1],
+                                                            agent.state.p_pos[0],
+                                                            agent.state.p_pos[1])
+
+                    speed_x = v_mag * cos(heading)
+                    speed_y = v_mag * sin(heading)
+                    mass = 1
+                    dt = 0.1
+                    action_x = 0.05 * (speed_x - agent.state.p_vel[0]) * mass / dt
+                    action_y = 0.05* (speed_y - agent.state.p_vel[1]) * mass / dt
+
+                    action_n[i][1] = action_x
+                    action_n[i][2] = 0
+                    action_n[i][3] = action_y
+                    action_n[i][4] = 0
+                else:
+                    print("3")
+                    heading = desired_heading
+
+                    speed_x = v_mag * cos(heading)
+                    speed_y = v_mag * sin(heading)
+                    mass = 1
+                    dt = 0.1
+                    action_x = 0.1*(speed_x - agent.state.p_vel[0])*mass/dt
+                    action_y = 0.1*(speed_y - agent.state.p_vel[1])*mass/dt
+
+                    action_n[i][1] = action_x
+                    action_n[i][2] = 0
+                    action_n[i][3] = action_y
+                    action_n[i][4] = 0
+
+
         # set action for each agent
         for i, agent in enumerate(self.agents):
             self._set_action(action_n[i], agent, self.action_space[i])
@@ -278,9 +361,11 @@ class MultiAgentEnv(gym.Env):
             for e, entity in enumerate(self.world.entities):
                 # u
                 if (e < 4):
-                    self.render_geoms_xform[e].set_rotation(entity.state.p_angle)
+                    v_angle = np.arctan2(entity.state.p_vel[1],entity.state.p_vel[0])
+                    self.render_geoms_xform[e].set_rotation(v_angle+math.pi/2)
                 if (e >= 4 and e < 8):
-                    self.render_geoms_xform[e].set_rotation(entity.state.p_angle)
+                    v_angle = np.arctan2(entity.state.p_vel[1],entity.state.p_vel[0])
+                    self.render_geoms_xform[e].set_rotation(v_angle+math.pi/2)
 
                 self.render_geoms_xform[e].set_translation(*entity.state.p_pos)
 

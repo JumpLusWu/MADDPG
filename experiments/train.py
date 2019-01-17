@@ -27,7 +27,6 @@ def parse_args():
     parser.add_argument("--save-dir", type=str, default="./temp/policy", help="directory in which training state and model should be saved")
     parser.add_argument("--save-rate", type=int, default=1000, help="save model once every time this many episodes are completed")
     parser.add_argument("--load-dir", type=str, default="", help="directory in which training state and model are loaded")
-    parser.add_argument("--load-dir2", type=str, default="", help="directory in which training state and model are loaded")
     # Evaluation
     parser.add_argument("--restore", action="store_true", default=False)
     parser.add_argument("--display", action="store_true", default=False)
@@ -61,10 +60,6 @@ def make_env(scenario_name, arglist, benchmark=False):
         env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation)
     return env
 
-def limit_speed_for_v(world,vel):
-        for i, agent in enumerate(world.agents):
-            agent.max_speed = vel
-
 def get_trainers(env, num_adversaries, obs_shape_n, arglist):
     trainers = []
     model = mlp_model
@@ -82,12 +77,6 @@ def get_trainers(env, num_adversaries, obs_shape_n, arglist):
 
 def train(arglist):
     with U.single_threaded_session():
-        #tensorboard
-        summary_writer = tf.summary.FileWriter("./graph/", U.get_session().graph)
-        reward_plot = None
-        reward_summary = tf.Summary()
-        reward_summary.value.add(tag='reward', simple_value=reward_plot)
-
         # Create environment
         env = make_env(arglist.scenario, arglist, arglist.benchmark)
         # Create agent trainers
@@ -116,22 +105,10 @@ def train(arglist):
         episode_step = 0
         train_step = 0
         t_start = time.time()
-
         print('Starting iterations...')
         while True:
-            # if episode_step==50:
-            #     U.initialize()
-            #     U.load_state(arglist.load_dir2)
-            #     limit_speed_for_v(env.world,1e-3)
-            # if episode_step==0:
-            #     #U.initialize()
-            #     U.load_state(arglist.load_dir)
-            #     limit_speed_for_v(env.world,None)
-
             # get action
             action_n = [agent.action(obs) for agent, obs in zip(trainers,obs_n)]
-            #print(action_n)
-            time.sleep(1)
             # environment step
             new_obs_n, rew_n, done_n, info_n = env.step(action_n)
             episode_step += 1
@@ -168,11 +145,9 @@ def train(arglist):
                         pickle.dump(agent_info[:-1], fp)
                     break
                 continue
-
-            # for displaying learned policies
             if arglist.display:
                 time.sleep(0.1)
-                #env.render()
+                env.render()
                 continue
 
             # update all trainers, if not in display or benchmark mode
@@ -181,10 +156,8 @@ def train(arglist):
                 agent.preupdate()
             for agent in trainers:
                 loss = agent.update(trainers, train_step)
-
-            # add reward to tensorboard
-            reward_summary.value[0].simple_value = np.mean(episode_rewards[-arglist.save_rate:])
-            summary_writer.add_summary(reward_summary, len(episode_rewards))
+                        # for displaying learned policies
+           
 
             # save model, display training output
             if terminal and (len(episode_rewards) % arglist.save_rate == 0):
@@ -197,8 +170,6 @@ def train(arglist):
                     print("steps: {}, episodes: {}, mean episode reward: {}, agent episode reward: {}, time: {}".format(
                         train_step, len(episode_rewards), np.mean(episode_rewards[-arglist.save_rate:]),
                         [np.mean(rew[-arglist.save_rate:]) for rew in agent_rewards], round(time.time()-t_start, 3)))
-
-
                 t_start = time.time()
                 # Keep track of final episode reward
                 final_ep_rewards.append(np.mean(episode_rewards[-arglist.save_rate:]))
@@ -218,13 +189,14 @@ def train(arglist):
 
 if __name__ == '__main__':
     arglist = parse_args()
-    arglist.scenario = 'capt_Wu'
-    arglist.display = False
-    arglist.num_units= 128
-    arglist.load_dir = './temp_Wu/train_model_update/temp_Wu/policy'
-    arglist.load_dir2 = './temp_orientation/policy'
+    arglist.scenario = 'capt_Wu1'
+    arglist.display =True
+    arglist.num_units= 64
+    arglist.restore= False
+    arglist.load_dir = './temp_Wu/policy'
+    # #arglist.load_dir2 = './temp_orientation/policy'
     arglist.exp_name = 'test1/'
-    arglist.max_episode_len =2
-    arglist.num_episodes =2000
-    arglist.save_dir ='./temp/policy'
+    arglist.max_episode_len=200
+    arglist.num_episodes =20000
+    arglist.save_dir ='./temp_orientation/policy'
     train(arglist)
