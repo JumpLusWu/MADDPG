@@ -278,9 +278,9 @@ class MultiAgentEnv(gym.Env):
             for e, entity in enumerate(self.world.entities):
                 # u
                 if (e < 4):
-                    self.render_geoms_xform[e].set_rotation(entity.state.p_angle + 1 / 2 * math.pi)
+                    self.render_geoms_xform[e].set_rotation(entity.state.p_angle)
                 if (e >= 4 and e < 8):
-                    self.render_geoms_xform[e].set_rotation(1 / 2 * math.pi + entity.state.p_angle)
+                    self.render_geoms_xform[e].set_rotation(entity.state.p_angle)
 
                 self.render_geoms_xform[e].set_translation(*entity.state.p_pos)
 
